@@ -1,0 +1,352 @@
+---
+title: "HW7"
+author: "Dhanvin Lakshmisha"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    df_print: paged
+---
+Dhanvin Lakshmisha
+
+dl37833
+
+SDS 315
+
+GitHub link - https://github.com/DhanvinL/SDS315-HW7
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(knitr)
+library(mosaic)
+library(MatchIt)
+
+
+armfold <- read.csv("armfold.csv")
+turnout <- read.csv("turnout.csv")
+
+```
+
+## Question 1
+
+### Part A
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+armfold |>
+  group_by(Sex) |>
+  summarize(x = n())
+```
+
+There are 111 females and 106 males in the dataset. 
+
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+armfold |>
+  group_by(Sex) |>
+  summarize(
+    prop_left_on_top = mean(LonR_fold == 1))
+
+```
+
+Approximately .423 of the sample females had their left hand on top and approximately .472 males had their left hand on top. 
+
+
+### Part B
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+left_arm_diff <- armfold |>
+  group_by(Sex) |>
+  summarize(prop_left_on_top = mean(LonR_fold == 1)) |>
+  pivot_wider(names_from = Sex, values_from = prop_left_on_top) |>
+  mutate(diff = Male - Female) |>
+  pull(diff)
+
+left_arm_diff
+```
+The observed difference in proportions between the two groups is approxmiately `r left_arm_diff`.
+
+### Part C
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+gender_counts <- table(armfold$Sex)
+prop.test(
+  x = c(sum(armfold$LonR_fold[armfold$Sex == "Male"]),
+        sum(armfold$LonR_fold[armfold$Sex == "Female"])),
+  n = c(gender_counts["Male"], gender_counts["Female"]),
+  correct = FALSE
+)
+
+```
+
+The 95 percent confidence interval is approximately from -0.0839 to .1805. 
+
+If we wanted to calculated manually, the formula for the standard of error for the difference between proportions is the square root of (((p1  * (1-p1))/ n1) + ((p2 * (1-p2))/n2)), where p1 is the first proportion and p2 is the second proportion while n1 and n2 are the sample sizes respectively. p1 is `r round( mean(armfold$LonR_fold[armfold$Sex == "Male"]),2)`, p2 is `r round(mean(armfold$LonR_fold[armfold$Sex == "Female"]),2)`, n1 = `r sum(armfold$Sex == "Male")` and n2 = `r sum(armfold$Sex == "Female")`. The z* star value I used was 1.96 because it is the number of standard deviations from the center of a normal distribution that captures 95 percent of the distribution (when doing +- 1.96), which is the confidence interval we are trying to create. 
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+male_prop <- mean(armfold$LonR_fold[armfold$Sex == "Male"])
+female_prop <- mean(armfold$LonR_fold[armfold$Sex == "Female"])
+n_male <- sum(armfold$Sex == "Male")
+n_female <- sum(armfold$Sex == "Female")
+
+SE <- sqrt( ((female_prop * (1 - female_prop)) / n_female) +
+            ((male_prop * (1 - male_prop)) / n_male ))
+
+z_star <- 1.96
+
+lower <-  left_arm_diff - z_star * SE
+upper <- left_arm_diff + z_star * SE
+c(lower, upper)
+
+```
+
+Using this formula, we get the confidence interval to be, `r c(lower, upper)`, which is similar to the confidence interval we got from the prop.test. 
+
+
+### Part D 
+
+If we were to estimate the true difference in population proportions between males and females who fold with their left arm on top, then we would expect that, with 95% confidence, the true difference lies between -.084 and .18. 
+
+### Part E
+
+The standard error represents the approximate variability in the difference between the sample proportions of males and females who fold their arms with the left arm on top. It accounts for how the difference in proportion is expected to fluctuate due to random sampling variability. In other terms, it is the standard deviation of a sampling distribution. 
+
+The difference between the two groups, male and females, could vary by sample. The standard error measures that variability. A smaller standard error indicates that our sample estimate is more reliable, while a larger standard error suggests greater uncertainty in the estimate.
+
+### Part F
+
+A sampling distribution is the distribution of the difference in sample proportions, males minus females who fold their arms with the left arm on top, across many hypothetical random samples. The difference in proportions varies from sample to sample due to random sampling variability. Different proportions for each group existing in different samples. 
+
+The true population proportions and difference in proportions stay fixed due to them representing the actual values for the population. Regardless of the sample taken, they remain the same. Also, for every sample in a single sampling distribution, the sample size must be the same. Within a single sampling distribution, the sample sizes cannot vary. Also, each sample needs to be random and independent. This allows for principles such as CLT and a normal distribution, which are seen in sampling distributions. 
+
+### Part G
+
+The Central Limit Theorem justifies using a normal distribution to approximate the sampling distribution of the difference in sample proportions. CLT states that for large sample sizes, the sampling distribution will approximate a normal distribution, even if the original population distribution is not normal. Thus, if we want to find the variability in the difference in proportions in a sample, we can assume the distribution of the variability will be approximately normal (as long as the samples are random and independent and the success-failure condition is met).  
+
+### Part H
+
+I would say that their claim can't be ruled out nor confirmed. The confidence interval tells us that we are 95 percent confident that the true difference in proportion between both groups lies between -0.01 and 0.30. Since this interval includes 0, there is a chance that the difference is 0 and that there's no difference in arm folding. There is also a chance the difference is not 0. Thus, we cannot firmly conclude there is a statistically significant difference between the genders.    
+
+However, even if a small difference exists, it may be a statistical difference and not a practical difference. This means that the small difference may not be that significant in the real-world. In this case, depending on interpretation, a difference of -0.01 or 0.30 may not be significant in determining whether one gender has a higher proportion that puts their left arm on top. Hence, the claim cannot be ruled out nor confirmed. 
+
+### Part I
+
+The confidence interval would be different across those samples because the difference in proportions will change from sample to sample. The proportion of women and men who have their left hand on top may fluctuate from sample to sample, making the difference among the groups change as well. Also, this would change the standard error, since it is reliant on the values of the proportions. These factors would change confidence interval after all the calculations are done. According to the coverage principle, in the long run, "X" percentage of "X" percent confidence intervals you calculate from different samples should contain the true proportion difference. "X" refers to the confidence level you set for a confidence interval, such as 95 percent, where "X" is 95. Thus, for this example, 95 percent of the 95 percent confidence intervals we create will contain the true difference in proportion. 
+
+
+## Question 2
+
+### Part A
+
+
+The proportion who voted in 1998 and got a GOTV call is - 
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+prop_whovoted <- turnout |>
+  filter(GOTV_call == 1) |> 
+  summarize(proportion = mean(voted1998))
+
+prop_whovoted
+
+```
+
+The proportion who voted in 1998 and did not get a GOTV call is - 
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+prop_no_whovoted <- turnout |>
+  filter(GOTV_call == 0) |> 
+  summarize(proportion = mean(voted1998))
+
+prop_no_whovoted 
+
+```
+
+
+Now we can create a 95 percent confidence interval for the difference between these two proportions. 
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+p1 <- prop_whovoted$proportion
+p2 <- prop_no_whovoted$proportion
+n1 <- sum(turnout$GOTV_call == 1)
+n2 <- sum(turnout$GOTV_call == 0)
+
+se_diff <- sqrt((p1 * (1 - p1) / n1) + (p2 * (1 - p2) / n2))
+
+z_score <- 1.96  
+lower_bound <- (p1 - p2) - z_score * se_diff
+upper_bound <- (p1 - p2) + z_score * se_diff
+
+
+c(lower_bound, upper_bound)
+```
+The 95 percent confidence interval is approximately from 0.143 to 0.264.
+
+### Part B
+
+We can visualize the confounding variables through a summary statistic table.  
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+
+summary_stats <- turnout |>
+  group_by(GOTV_call, voted1998) |>
+  summarize(
+    mean_AGE = mean(AGE, na.rm = TRUE),
+    prop_voted1996 = mean(voted1996, na.rm = TRUE),
+    prop_MAJORPTY = mean(MAJORPTY, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+summary_stats
+```
+
+
+For age, people who received GOTV calls were noticeably older than those who didn't. The averages were around 52.4 and 61.5 years for those who got the GOTV call and around 44.8 and 55.2 years for those who didn't. Also, the mean age of people who voted is higher than people who did not vote in 1998, where the mean age for voters is around 61.5 and 55.2 years and around 44.8 and 52.4 for non-voters. This age pattern suggests older individuals were both more likely to be targeted for calls and more likely to vote in 1998. 
+
+For the indicator on whether they voted in 1996, GOTV call recipients had higher 1996 voting rates compared to non-recipients. The proportion was around .35 and .76 for people who did not get the GOTV call and around .44 and .85 for people who did get the GOTV call, showing that people who received the GOTV call had most likely voted in 1996. Those who voted in 1998 were much more likely to have voted in 1996 (around .76 and .86 as a proportion) compared to non-voters in 1998 (around .35 and .45 as a proportion). This suggests that prior voting behavior strongly predicts both call targeting and future voting.  
+
+For the indicator on whether the person was registered as a member of either one of the two major U.S parties, major party membership rates were higher among GOTV call recipients around .75 and .83 as a proportion) than non-recipients (around .70 and .80 as a proportion). Also, 1998 voters had higher party membership rates, around .80 and .83 as a proportion, than non-voters, who had proportions around .70 and .75 as a proportion. This implies that campaign organizers focused their efforts on party members who were already more likely to vote based on their party attachment.
+
+If we want to confirm that there is a difference between GOTV Call Recipients and Non-Recipients for each confounding variable, we can create confidence intervals. 
+
+Here is the confidence interval for the difference in mean ages between GOTV Call Recipients and Non-Recipients.
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+age_ci <- t.test(AGE ~ GOTV_call, data = turnout)
+age_ci$conf.int
+```   
+Since this interval does not contain 0, we can assume, with 95 percent confidence, that the difference is statistically significant. It is highly possible a difference in GOTV call receival exists between ages, where older people are more likely to get the GOTV call.
+
+
+Here is the confidence interval for the difference in proportion who voted in 1996 between GOTV call recipients and non-recipients.
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+voted1996_table <- table(turnout$GOTV_call, turnout$voted1996)
+voted1996_ci <- prop.test(c(voted1996_table[2,2], voted1996_table[1,2]), 
+                         c(sum(voted1996_table[2,]), sum(voted1996_table[1,])))
+voted1996_ci$conf.int
+
+```
+Since this interval does not contain 0, we can assume, with 95 percent confidence, that the difference is statistically significant. It is highly possible a difference in GOTV call receival exists for people who voted in 1996 versus people who did not, where people who voted in 1996 are more likely to get the GOTV call.
+
+
+Here is the confidence interval for the difference in proportion for people affiliated with parties between GOTV Call Recipients and Non-Recipients.
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+majorpty_table <- table(turnout$GOTV_call, turnout$MAJORPTY)
+majorpty_ci <- prop.test(c(majorpty_table[2,2], majorpty_table[1,2]), 
+                        c(sum(majorpty_table[2,]), sum(majorpty_table[1,])))
+
+majorpty_ci$conf.int
+```
+Since this interval does not contain 0, we can assume, with 95 percent confidence, that the difference is statistically significant. It is highly possible a difference in GOTV call receival exists between people who were registered under parties and people who were not. People who are registered in the major parties are more likely to get the GOTV call than people who are not registered in one of the two major parties. 
+
+Since these confidence intervals do not contain 0, the variables age, prior voting, and party membership are genuine confounders as they influence receiving GOTV calls. The difference between proportions or means of GOTV recipients and non-recipients when considering each confounding variable is non-zero, indicating some external variable is affecting whether a person receives a GOTV call. 
+
+
+### Part C
+
+
+Here is the result of matching our data set with the confounders, with a ratio of 5, in the form summary statistic table.
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+match_model <- matchit(GOTV_call ~ voted1996 + AGE + MAJORPTY,
+                      data = turnout,
+                      method = "nearest",
+                      ratio = 5)
+
+matched_data <- match.data(match_model)
+
+```
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+matched_summary_stats <- matched_data |>
+  group_by(GOTV_call, voted1998) |>
+  summarize(
+    mean_AGE = mean(AGE, na.rm = TRUE),
+    prop_voted1996 = mean(voted1996, na.rm = TRUE),
+    prop_MAJORPTY = mean(MAJORPTY, na.rm = TRUE)
+  )
+matched_summary_stats
+
+
+```
+
+Also, here are the confidence intervals for age, 1996 voting, and party affiliation. 
+
+The confidence interval for age:
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+age_matched_ci <- t.test(AGE ~ GOTV_call, data = matched_data)
+age_matched_ci$conf.int
+
+```
+
+The confidence interval for 1996 voting:
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+voted1996_matched_table <- table(matched_data$GOTV_call, matched_data$voted1996)
+voted1996_matched_ci <- prop.test(c(voted1996_matched_table[2,2], voted1996_matched_table[1,2]), 
+                      c(sum(voted1996_matched_table[2,]), sum(voted1996_matched_table[1,])))
+voted1996_matched_ci$conf.int
+
+```
+
+The confidence interval for party affiliation:
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+majorpty_matched_table <- table(matched_data$GOTV_call, matched_data$MAJORPTY)
+majorpty_matched_ci <- prop.test(c(majorpty_matched_table[2,2], majorpty_matched_table[1,2]), 
+                     c(sum(majorpty_matched_table[2,]), sum(majorpty_matched_table[1,])))
+majorpty_matched_ci$conf.int
+```
+
+These confidence intervals compare the difference in mean or proportion (depending on the variable) between GOTV Call Recipients and Non-Recipients based on confounding variables. 
+
+Since all confidence intervals contain zero, we can say that the matched dataset has successfully balanced the three confounding variables. This means that any remaining difference in 1998 voting behavior between GOTV call recipients and non-recipients in the matched sample cannot be attributed to pre-existing differences or potentially other variables. 
+
+This is also supported by the statistic summary table where the values for each confounding variable whether people received the call and voted or did not receive the call and voted are similar. For example, the mean age of individuals who received the GOTV call (52.4 and 61.5) is similar to that of individuals who did not receive the GOTV call (51.7 and 63.3). Similarly, the proportions of people who voted in 1996 and those affiliated with a major political party are also comparable between the two groups. 
+
+Thus, in the matched data, GOTV call recipients and non-recipients are now similar in terms of the confounders, which is supported by the similar values from both groups. The remaining difference in voting behavior between these two groups can most likely be attributed to the whether they received the GOTV call rather than any external factors.
+
+
+
+Here is Part A with the new matched data set: 
+
+The proportion of the matched dataset who voted in 1998 and received a GOTV call.
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+prop_matched_whovoted <- matched_data |>
+  filter(GOTV_call == 1) |> 
+  summarize(proportion = mean(voted1998))
+prop_matched_whovoted
+```
+
+The proportion of the matched dataset who voted in 1998 and did not recieve a GOTV call.
+
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+prop_matched_nowhovoted <- matched_data |>
+  filter(GOTV_call == 0) |> 
+  summarize(proportion = mean(voted1998))
+
+prop_matched_nowhovoted
+```
+
+The confidence interval for the difference in proportions between both groups. 
+```{r message = FALSE, warning = FALSE, echo = FALSE}
+n1_matched <- sum(matched_data$GOTV_call == 1)
+n2_matched <- sum(matched_data$GOTV_call == 0)
+
+p1_matched <- prop_matched_whovoted$proportion
+p2_matched <- prop_matched_nowhovoted$proportion
+
+se_diff1 <- sqrt((p1_matched * (1 - p1_matched) / n1_matched) + (p2_matched * (1 - p2_matched) / n2_matched))
+
+z_score <- 1.96
+lower_bound1 <- (p1_matched - p2_matched) - z_score * se_diff1
+upper_bound1 <- (p1_matched - p2_matched) + z_score * se_diff1
+
+
+c(lower_bound1, upper_bound1)
+
+
+
+```
+
+Based on the confidence interval `r c(lower_bound1, upper_bound1)`, we are 95 percent confident that GOTV calls had a statistically significant positive effect on the likelihood of voting in the 1998 election. Since the entire confidence interval is positive and does not contain 0, we can conclude that the GOTV does lead to slightly higher rate of voting. Also, this is practically meaningful since this comes from the matched data after balancing the confounding variables. Thus, we can reasonably assume that GOTV impacts voting in a positive way.  
+
